@@ -18,7 +18,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, MultiStepLR, CosineAnnea
 
 
 class Trainer:
-    def __init__(self, args, config):
+    def __init__(self, args):
 
         self.args = args
         # ------------ config ------------
@@ -47,7 +47,7 @@ class Trainer:
             std = (0.229, 0.224, 0.225)
 
         transform_train = Compose(
-            Resize(resize_shape),
+            Resize(resize_shape, dataset_name),
             ColorJitter(),
             RandomFlip(),
             Rotation(2),
@@ -68,7 +68,7 @@ class Trainer:
         )
 
         # ------------ val data ------------
-        self.transform_val_img = Resize(resize_shape)
+        self.transform_val_img = Resize(resize_shape, dataset_name)
         transform_val_x = Compose(ToTensor(), Normalize(mean=mean, std=std))
         transform_val = Compose(self.transform_val_img, transform_val_x)
         val_dataset = Dataset_Type(Dataset_Path[dataset_name], "val", transform_val)
@@ -78,17 +78,12 @@ class Trainer:
 
         # ------------ preparation ------------
         model_config = exp_cfg["MODEL_CONFIG"]
-        parallel_training = exp_cfg["MODEL_CONFIG"].pop("parallel_training")
         self.net = segformer(model_config, dataset_name, pretrained=True)
 
-        if parallel_training:
-            self.net = nn.parallel.DistributedDataParallel(self.net)
         self.net = self.net.to(self.device)
 
         self.optimizer = optim.AdamW(self.net.parameters(), **exp_cfg["optim"])
-        self.lr_scheduler = MultiStepLR(
-            self.optimizer, milestones=[3, 6, 9], gamma=0.1, verbose=True
-        )
+        self.lr_scheduler = MultiStepLR(self.optimizer, milestones=[3, 6, 9], gamma=0.1, verbose=True)
         self.best_val_loss = 1e6
 
     def train(self):
@@ -109,10 +104,7 @@ class Trainer:
                 seg_pred, exist_pred, loss_seg, loss_exist, loss = self.net(
                     img, segLabel, exist
                 )
-                if isinstance(self.net, torch.nn.DataParallel):
-                    loss_seg = loss_seg.sum()
-                    loss_exist = loss_exist.sum()
-                    loss = loss.sum()
+
                 loss.backward()
                 self.optimizer.step()
                 # lr_scheduler.step()

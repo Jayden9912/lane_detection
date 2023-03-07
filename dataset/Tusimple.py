@@ -117,16 +117,9 @@ class Tusimple(Dataset):
         save_dir = "seg_label"
 
         os.makedirs(os.path.join(self.data_dir_path, save_dir, "list"), exist_ok=True)
-        list_f = open(
-            os.path.join(
-                self.data_dir_path, save_dir, "list", "{}_gt.txt".format(image_set)
-            ),
-            "w",
-        )
+        list_f = open(os.path.join(self.data_dir_path, save_dir, "list", "{}_gt.txt".format(image_set)),"w",)
 
-        json_path = os.path.join(
-            self.data_dir_path, save_dir, "{}.json".format(image_set)
-        )
+        json_path = os.path.join(self.data_dir_path, save_dir, "{}.json".format(image_set))
         with open(json_path) as f:
             for line in f:
                 label = json.loads(line)
@@ -136,25 +129,14 @@ class Tusimple(Dataset):
                 _lanes = []
                 slope = []  # identify 1st, 2nd, 3rd, 4th lane through slope
                 for i in range(len(label["lanes"])):
-                    l = [
-                        (x, y)
-                        for x, y in zip(label["lanes"][i], label["h_samples"])
-                        if x >= 0
-                    ]
+                    l = [(x, y) for x, y in zip(label["lanes"][i], label["h_samples"]) if x >= 0]
                     if len(l) > 1:
                         _lanes.append(l)
-                        slope.append(
-                            np.arctan2(l[-1][1] - l[0][1], l[0][0] - l[-1][0])
-                            / np.pi
-                            * 180
-                        )
+                        slope.append(np.arctan2(l[-1][1] - l[0][1], l[0][0] - l[-1][0]) / np.pi * 180)
                 _lanes = [_lanes[i] for i in np.argsort(slope)]
                 slope = [slope[i] for i in np.argsort(slope)]
 
-                idx_1 = None
-                idx_2 = None
-                idx_3 = None
-                idx_4 = None
+                idx_1,idx_2,idx_3,idx_4 = None,None,None,None
                 for i in range(len(slope)):
                     if slope[i] <= 90:
                         idx_2 = i
@@ -178,22 +160,11 @@ class Tusimple(Dataset):
                         list_str.append("0")
                         continue
                     for j in range(len(coords) - 1):
-                        cv2.line(
-                            seg_img,
-                            coords[j],
-                            coords[j + 1],
-                            (i + 1, i + 1, i + 1),
-                            SEG_WIDTH // 2,
-                        )
+                        cv2.line(seg_img,coords[j],coords[j + 1],(i + 1, i + 1, i + 1),SEG_WIDTH // 2,)
                     list_str.append("1")
 
                 seg_path = img_path.split("/")
-                seg_path, img_name = (
-                    os.path.join(
-                        self.data_dir_path, save_dir, seg_path[1], seg_path[2]
-                    ),
-                    seg_path[3],
-                )
+                seg_path, img_name = (os.path.join(self.data_dir_path, save_dir, seg_path[1], seg_path[2]),seg_path[3])
                 os.makedirs(seg_path, exist_ok=True)
                 seg_path = os.path.join(seg_path, img_name[:-3] + "png")
                 cv2.imwrite(seg_path, seg_img)

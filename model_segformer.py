@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from functools import partial
 import torch.nn.functional as F
-from loss.focal_loss import FocalLoss
 from mmseg.models.backbones import MixVisionTransformer
 from mmseg.models.decode_heads import SegFormerHead
 
@@ -60,6 +59,7 @@ class segformer(nn.Module):
 
     def load_pretrained(self):
         encoder_weight = torch.load("/home/automan/wuguanjie/SegFormer/pretrained/mit_b0.pth")
+        # encoder pretrained on ImageNet 1K, remove the FCL weight and bias, decoder is randomly initialized
         encoder_weight.pop("head.weight")
         encoder_weight.pop("head.bias")
         self.encoder.load_state_dict(encoder_weight)

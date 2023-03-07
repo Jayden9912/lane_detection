@@ -85,5 +85,5 @@ def lane_coords_postprocess(predicted_coords):
             if y in ly:
                 idx = np.where(ly == y)[0][0]
                 tmp_coords.append([int(lx[idx]), y])
-        postpro_coords.append(tmp_coords)
+        postpro_coords.append(tmp_coords[::-1])
     return postpro_coords

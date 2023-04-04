@@ -1,3 +1,4 @@
+wandb/
 experiments/
 rubbish_bin/
 trt/*.trt

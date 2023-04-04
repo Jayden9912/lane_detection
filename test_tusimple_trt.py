@@ -28,9 +28,7 @@ exp_name = exp_dir.split("/")[-1]
 trt_dir = args.trt_dir
 input_batch_size = args.batch_size
 
-with open(os.path.join(exp_dir, "cfg.json")) as f:
-    exp_cfg = json.load(f)
-resize_shape = tuple(exp_cfg["dataset"]["resize_shape"])
+resize_shape = (512,288)
 
 def split_path(path):
     """split path tree into list"""

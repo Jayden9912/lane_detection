@@ -9,15 +9,17 @@ from utils.prob2lines import curve_fitting_Tusimple
 
 import dataset
 from config import *
-from model import SCNN
+from model_SCNN import SCNN
 from utils.prob2lines import getLane
 from utils.transforms import *
 from model_segformer import segformer
+from model_default_config import LDoptions
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_dir", type=str, default="./experiments/exp0")
+    parser.add_argument("--resize_shape", nargs="+", type=int, default=[512, 288])
     args = parser.parse_args()
     return args
 
@@ -27,9 +29,7 @@ args = parse_args()
 exp_dir = args.exp_dir
 exp_name = exp_dir.split("/")[-1]
 
-with open(os.path.join(exp_dir, "cfg.json")) as f:
-    exp_cfg = json.load(f)
-resize_shape = tuple(exp_cfg["dataset"]["resize_shape"])
+
 device = torch.device("cuda")
 
 
@@ -55,7 +55,7 @@ def split_path(path):
 mean = (0.485, 0.456, 0.406)
 std = (0.229, 0.224, 0.225)
 transform = Compose(
-    Resize(resize_shape, "Tusimple"), ToTensor(), Normalize(mean=mean, std=std)
+    Resize(tuple(args.resize_shape), "Tusimple"), ToTensor(), Normalize(mean=mean, std=std)
 )
 dataset_name = "Tusimple"
 Dataset_Type = getattr(dataset, dataset_name)
@@ -63,8 +63,8 @@ test_dataset = Dataset_Type(Dataset_Path["Tusimple"], "test", transform)
 test_loader = DataLoader(
     test_dataset, batch_size=1, collate_fn=test_dataset.collate, num_workers=4
 )
-model_config = exp_cfg["MODEL_CONFIG"]
-net = segformer(model_config, dataset_name, pretrained=True)
+model_config = LDoptions()
+net = segformer(model_config, dataset_name, pretrained=False)
 # net = SCNN(input_size=resize_shape, pretrained=False) #resize_shape = (512,288)
 save_name = os.path.join(exp_dir, exp_dir.split("/")[-1] + "_best.pth")
 save_dict = torch.load(save_name, map_location="cpu")
@@ -97,17 +97,17 @@ with torch.no_grad():
             seg = seg_pred[b]
             exist = [1 if exist_pred[b, i] > 0.5 else 0 for i in range(4)]
             lane_coords, lane_idx = getLane.prob2lines_tusimple(
-                seg, exist, resize_shape=(720, 1280), y_px_gap=10, pts=56
+                seg, exist, resize_shape=(720, 1280), y_px_gap=10, pts=56, smooth=False
             )
             for i in range(len(lane_coords)):
                 lane_coords[i] = sorted(lane_coords[i], key=lambda pair: pair[1])
-            # # RANSAC curve fitting --- start
-            # preprocessed_lane_coords = curve_fitting_Tusimple.lane_coords_preprocess(lane_coords)
-            # predicted_lane_coords = curve_fitting_Tusimple.ransac_fitting(
-            #     preprocessed_lane_coords
-            # )
-            # lane_coords = curve_fitting_Tusimple.lane_coords_postprocess(predicted_lane_coords)
-            # # RANSAC curve fitting --- end
+            # RANSAC curve fitting --- start
+            preprocessed_lane_coords = curve_fitting_Tusimple.lane_coords_preprocess(lane_coords)
+            predicted_lane_coords = curve_fitting_Tusimple.ransac_fitting(
+                preprocessed_lane_coords
+            )
+            lane_coords = curve_fitting_Tusimple.lane_coords_postprocess(predicted_lane_coords)
+            # RANSAC curve fitting --- end
             path_tree = split_path(img_name[b])
             save_dir, save_name = path_tree[-3:-1], path_tree[-1]
             save_dir = os.path.join(out_path, *save_dir)

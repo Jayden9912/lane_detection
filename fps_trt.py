@@ -56,7 +56,8 @@ if __name__ == "__main__":
         pred_img = cv2.imread("/home/automan/wuguanjie/CULane_path/driver_37_30frame/05191358_0443.MP4/00060.jpg")
         pred_img = cv2.cvtColor(pred_img, cv2.COLOR_BGR2RGB)
     else: #Tusimple
-        pred_img = cv2.imread("/home/automan/wuguanjie/TuSimple/test/clips/0531/1492626253262712112/20.jpg")
+        # pred_img = cv2.imread("/home/automan/wuguanjie/TuSimple/test/clips/0531/1492626253262712112/20.jpg")
+        pred_img = cv2.imread("/home/automan/wuguanjie/TuSimple/train/clips/0531te/1492626749527113213/20.jpg")
         pred_img = cv2.cvtColor(pred_img, cv2.COLOR_BGR2RGB)
     vis_img = pred_img.copy()
 

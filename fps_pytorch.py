@@ -7,29 +7,20 @@ from tqdm import tqdm
 import torch.nn.functional as F
 from utils.prob2lines import getLane
 from model_segformer import segformer
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_dir", type=str, help = "directory to the experiment's file path (e.g. ./experiments/exp0)")
-    parser.add_argument("--iteration", type=int, default=100, help = "iteration number")
-    parser.add_argument("--dataset", type=str, help = "dataset name (Tusimple or CULane)")
-    args = parser.parse_args()
-    return args
+from options import LDoptions
 
 # cuDnn configurations
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.deterministic = True
 
-args = parse_args()
+opts = LDoptions()
+args = opts.parse()
 exp_dir = args.exp_dir
-iteration = args.iteration
-dataset = args.dataset
+iteration = 1000
+dataset = args.dataset_name
 assert dataset in ["Tusimple", "CULane"]
 
-with open(os.path.join(exp_dir, "cfg.json"), "r") as f:
-    exp_cfg = json.load(f)
-model_config = exp_cfg['MODEL_CONFIG']
-model = segformer(model_config, dataset, pretrained=True)
+model = segformer(args, dataset, pretrained=True)
 
 # load the pretrained weight of the model
 save_name = os.path.join(exp_dir, exp_dir.split("/")[-1] + "_best.pth")
@@ -72,7 +63,7 @@ for i in tqdm(range(iteration)):
     time_list.append(time.time()-tic)
 # the first iteration time cost much higher, so exclude the first iteration
 time_list = time_list[1:]
-print("     + Done 10000 iterations inference !")
+print("     + Done {} iterations inference !".format(iteration))
 print("     + Total time cost: {}s".format(sum(time_list)))
 print("     + Average time cost: {}s".format(sum(time_list)/(iteration-1)))
 print("     + Frame Per Second: {:.2f}".format(1/(sum(time_list)/(iteration-1))))

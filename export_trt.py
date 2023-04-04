@@ -15,11 +15,8 @@ def to_numpy(tensor):
     )
 
 
-def load_torch_model(cfg_path, pth_path, dataset):
+def load_torch_model(model_config, pth_path, dataset):
     print("Loading model!")
-    with open(cfg_path) as f:
-        exp_cfg = json.load(f)
-    model_config = exp_cfg["MODEL_CONFIG"]
     model = segformer(model_config, dataset, pretrained=True)
     save_dict = torch.load(pth_path)
     model.load_state_dict(save_dict["net"])
@@ -92,6 +89,18 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, help = "batch size of the tensorrt engine")
     parser.add_argument("--toonnx", action="store_true")
     parser.add_argument("--totrt", action="store_true")
+    # --------------------------------------------------------------------------------
+    parser.add_argument("--pooling_method", type=str, default="avg", choices=["avg","max"])
+    parser.add_argument("--embed_dims", nargs="+", type=int, default=[32, 64, 160, 256])
+    parser.add_argument("--num_heads", nargs="+", type=int, default=[1, 2, 5, 8])
+    parser.add_argument("--mlp_ratios", nargs="+", type=int, default=[4, 4, 4, 4])
+    parser.add_argument("--without_qkv_bias", action="store_false")
+    parser.add_argument("--encoder_depths", nargs="+", default=[2, 2, 2, 2])
+    parser.add_argument("--sr_ratio", nargs="+", type=int, default=[8, 4, 2, 1])
+    parser.add_argument("--drop_rate", type=float, default=0.0, help="dropout rate used for MLP, product of attention and values vector")
+    parser.add_argument("--attention_drop_rate", type=float, default=0.0)
+    parser.add_argument("--drop_path_rate", type=int, default=0.1)
+    parser.add_argument("--se_layer", action="store_true")
     args = parser.parse_args()
     return args
 
@@ -104,7 +113,6 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     toonnx = args.toonnx
     totrt = args.totrt
-    cfg_path = os.path.join(exp_dir, "cfg.json")
     pth_path = os.path.join(exp_dir, exp_dir.split("/")[-1] + "_best.pth")
     engine_path = os.path.join(saving_path, exp_dir.split("/")[-1] + "_batch{}.trt".format(str(batch_size)))
     onnx_name = os.path.join(saving_path, "test.onnx")
@@ -114,7 +122,7 @@ if __name__ == "__main__":
         input = torch.randn(batch_size, 3, 288, 512, requires_grad=True)
 
     if toonnx:
-        pytorch_model = load_torch_model(cfg_path, pth_path, dataset)
+        pytorch_model = load_torch_model(args, pth_path, dataset)
         torch2onnx(pytorch_model, onnx_name, input)
         test_onnx_model(onnx_name, pytorch_model, input)
     if totrt:

@@ -3,7 +3,7 @@ import json
 import os
 import torch
 
-from model import SCNN
+from model_SCNN import SCNN
 
 def parse_args():
     parser = argparse.ArgumentParser()

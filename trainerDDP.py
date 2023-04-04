@@ -58,7 +58,7 @@ class Trainer:
         transform_train = Compose(
             Resize(self.resize_shape, self.dataset_name),
             ColorJitter(),
-            RandomFlip(),
+            RandomFlip(0.5),
             Rotation(2),
             ToTensor(),
             Normalize(mean=mean, std=std),
@@ -92,7 +92,7 @@ class Trainer:
             Dataset_Path[self.dataset_name], "val", transform_val
         )
         self.val_loader = DataLoader(
-            val_dataset, batch_size=8, collate_fn=val_dataset.collate, num_workers=4
+            val_dataset, batch_size=8, collate_fn=val_dataset.collate, num_workers=4,sampler=DistributedSampler(val_dataset)
         )
 
         # ------------ preparation ------------
@@ -172,8 +172,8 @@ class Trainer:
 
             early_phase = self.step < 1500
             late_phase = self.step % 100 == 0
-            if early_phase or late_phase:
-                self.log(self.training_losses)
+            # if early_phase or late_phase:
+            #     self.log(self.training_losses)
             self.step += 1
         if self.device == 0:
             self.save_snapshot()
@@ -240,7 +240,7 @@ class Trainer:
                         )
                         origin_imgs.append(img)
                         origin_imgs.append(lane_img)
-                    self.log_img(origin_imgs, batch_idx)
+                    # self.log_img(origin_imgs, batch_idx)
 
                 self.validation_losses["val_loss"] += loss.item()
                 self.validation_losses["val_loss_seg"] += loss_seg.item()
@@ -250,7 +250,7 @@ class Trainer:
                 progressbar.update(1)
 
         progressbar.close()
-        self.log(self.validation_losses)
+        # self.log(self.validation_losses)
 
         print("------------------------\n")
         print("best val loss", self.best_val_loss)

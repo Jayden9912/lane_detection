@@ -19,6 +19,7 @@ class RandomFlip(CustomTransform):
     def __call__(self, sample):
         img = sample.get('img').copy()
         segLabel = sample.get('segLabel', None)
+        exist = sample.get('exist', None)
         if segLabel is not None:
             segLabel = segLabel.copy()
 
@@ -28,6 +29,17 @@ class RandomFlip(CustomTransform):
             img = np.ascontiguousarray(np.flip(img, axis=1))
             if segLabel is not None:
                 segLabel = np.ascontiguousarray(np.flip(segLabel, axis=1))
+                idx1 = np.isin(segLabel, 1)
+                idx2 = np.isin(segLabel, 2)
+                idx3 = np.isin(segLabel, 3)
+                idx4 = np.isin(segLabel, 4)
+                segLabel[idx1] = 4
+                segLabel[idx4] = 1
+                segLabel[idx2] = 3
+                segLabel[idx3] = 2
+            exist = np.ascontiguousarray(np.flip(exist, axis=-1))
+            
+
 
         if flip_y:
             img = np.ascontiguousarray(np.flip(img, axis=0))
@@ -37,6 +49,7 @@ class RandomFlip(CustomTransform):
         _sample = sample.copy()
         _sample['img'] = img
         _sample['segLabel'] = segLabel
+        _sample['exist'] = exist
         return _sample
 
 

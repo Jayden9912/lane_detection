@@ -8,15 +8,17 @@ from tqdm import tqdm
 
 import dataset
 from config import *
-from model import SCNN
+from model_SCNN import SCNN
 from utils.prob2lines import getLane, curve_fitting_CULane
 from utils.transforms import *
 from model_segformer import segformer
+from model_default_config import LDoptions
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_dir", type=str, default="./experiments/exp10")
+    parser.add_argument("--exp_dir", type=str, default="./experiments/exp0")
+    parser.add_argument("--resize_shape", nargs="+", type=int, default=[512, 288])
     args = parser.parse_args()
     return args
 
@@ -26,9 +28,6 @@ args = parse_args()
 exp_dir = args.exp_dir
 exp_name = exp_dir.split("/")[-1]
 
-with open(os.path.join(exp_dir, "cfg.json")) as f:
-    exp_cfg = json.load(f)
-resize_shape = tuple(exp_cfg["dataset"]["resize_shape"])
 device = torch.device("cuda")
 
 
@@ -53,17 +52,18 @@ std = (0.2573, 0.2663, 0.2756)
 # Imagenet mean, std
 # mean = (0.485, 0.456, 0.406)
 # std = (0.229, 0.224, 0.225)
-dataset_name = exp_cfg["dataset"].pop("dataset_name")
+dataset_name = "CULane"
 Dataset_Type = getattr(dataset, dataset_name)
 transform = Compose(
-    Resize(resize_shape, dataset_name), ToTensor(), Normalize(mean=mean, std=std)
+    Resize(tuple(args.resize_shape), dataset_name), ToTensor(), Normalize(mean=mean, std=std)
 )
 test_dataset = Dataset_Type(Dataset_Path[dataset_name], "test", transform)
 test_loader = DataLoader(
-    test_dataset, batch_size=32, collate_fn=test_dataset.collate, num_workers=4
+    test_dataset, batch_size=16, collate_fn=test_dataset.collate, num_workers=4
 )
-model_config = exp_cfg["MODEL_CONFIG"]
-net = segformer(model_config, dataset_name,pretrained=True)
+
+model_config = LDoptions()
+net = segformer(model_config, dataset_name,pretrained=False)
 # net = SCNN(resize_shape, pretrained=False)
 save_name = os.path.join(exp_dir, exp_dir.split("/")[-1] + "_best.pth")
 save_dict = torch.load(save_name, map_location="cpu")
@@ -102,11 +102,11 @@ with torch.no_grad():
             )
 
             # # RANSAC curve fitting --- start
-            preprocessed_lane_coords = curve_fitting_CULane.lane_coords_preprocess(lane_coords)
-            predicted_lane_coords = curve_fitting_CULane.ransac_fitting(
-                preprocessed_lane_coords
-            )
-            lane_coords = curve_fitting_CULane.lane_coords_postprocess(predicted_lane_coords)
+            # preprocessed_lane_coords = curve_fitting_CULane.lane_coords_preprocess(lane_coords)
+            # predicted_lane_coords = curve_fitting_CULane.ransac_fitting(
+            #     preprocessed_lane_coords
+            # )
+            # lane_coords = curve_fitting_CULane.lane_coords_postprocess(predicted_lane_coords)
             # # RANSAC curve fitting --- end
             path_tree = split_path(img_name[b])
             save_dir, save_name = path_tree[-3:-1], path_tree[-1]
